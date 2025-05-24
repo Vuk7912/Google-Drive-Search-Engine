@@ -45,30 +45,37 @@ from app import get_credentials
 
 def test_get_credentials_file_not_exists():
     """Test get_credentials() when credentials file does not exist."""
-    with patch('os.path.join', return_value='.auth/credentials.json'):
-        with patch('oauth2client.file.Storage.get', return_value=None):
+    with patch('oauth2client.file.Storage', autospec=True) as mock_storage_class:
+        mock_storage = mock_storage_class.return_value
+        mock_storage.get.return_value = None
+        
+        with patch('os.path.join', return_value='.auth/credentials.json'):
             result = get_credentials()
             assert result is False, "Should return False when no credentials exist"
 
 def test_get_credentials_invalid_credentials():
     """Test get_credentials() with invalid credentials."""
-    mock_invalid_creds = MagicMock()
-    mock_invalid_creds.invalid = True
-    
-    with patch('os.path.join', return_value='.auth/credentials.json'):
-        with patch('oauth2client.file.Storage.get', return_value=mock_invalid_creds):
+    with patch('oauth2client.file.Storage', autospec=True) as mock_storage_class:
+        mock_storage = mock_storage_class.return_value
+        mock_credentials = MagicMock()
+        mock_credentials.invalid = True
+        mock_storage.get.return_value = mock_credentials
+        
+        with patch('os.path.join', return_value='.auth/credentials.json'):
             result = get_credentials()
             assert result is False, "Should return False for invalid credentials"
 
 def test_get_credentials_valid_credentials():
     """Test get_credentials() with valid credentials."""
-    mock_valid_creds = MagicMock()
-    mock_valid_creds.invalid = False
-    mock_valid_creds.access_token = "test_access_token"
-    mock_valid_creds.client_id = "test_client_id"
-    
-    with patch('os.path.join', return_value='.auth/credentials.json'):
-        with patch('oauth2client.file.Storage.get', return_value=mock_valid_creds):
+    with patch('oauth2client.file.Storage', autospec=True) as mock_storage_class:
+        mock_storage = mock_storage_class.return_value
+        mock_credentials = MagicMock()
+        mock_credentials.invalid = False
+        mock_credentials.access_token = "test_access_token"
+        mock_credentials.client_id = "test_client_id"
+        mock_storage.get.return_value = mock_credentials
+        
+        with patch('os.path.join', return_value='.auth/credentials.json'):
             result = get_credentials()
             assert result is not False, "Should return credentials when valid"
             assert result.invalid is False, "Returned credentials should be valid"
@@ -76,14 +83,20 @@ def test_get_credentials_valid_credentials():
 
 def test_get_credentials_file_permissions():
     """Test get_credentials() handling of file permission issues."""
-    with patch('os.path.join', return_value='.auth/credentials.json'):
-        with patch('oauth2client.file.Storage.get', side_effect=PermissionError):
+    with patch('oauth2client.file.Storage', autospec=True) as mock_storage_class:
+        mock_storage = mock_storage_class.return_value
+        mock_storage.get.side_effect = PermissionError("Mock permission error")
+        
+        with patch('os.path.join', return_value='.auth/credentials.json'):
             result = get_credentials()
             assert result is False, "Should return False on permission error"
 
 def test_get_credentials_corrupt_file():
     """Test get_credentials() with a corrupt credentials file."""
-    with patch('os.path.join', return_value='.auth/credentials.json'):
-        with patch('oauth2client.file.Storage.get', side_effect=json.JSONDecodeError("", doc="", pos=0)):
+    with patch('oauth2client.file.Storage', autospec=True) as mock_storage_class:
+        mock_storage = mock_storage_class.return_value
+        mock_storage.get.side_effect = json.JSONDecodeError("", doc="", pos=0)
+        
+        with patch('os.path.join', return_value='.auth/credentials.json'):
             result = get_credentials()
             assert result is False, "Should return False for corrupt credentials file"
