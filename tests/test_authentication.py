@@ -67,21 +67,40 @@ def test_get_credentials_invalid_credentials():
 
 def test_get_credentials_valid_credentials():
     """Test get_credentials() with valid credentials."""
-    def mock_print(message):
-        """Mock the print function to prevent output during test."""
-        pass
+    def debug_print(message):
+        """Capture and log print messages for debugging."""
+        print(f"DEBUG: {message}")
 
-    with patch('builtins.print', side_effect=mock_print):
+    class VerboseMock(MagicMock):
+        """Mock that allows capturing method calls."""
+        def __call__(self, *args, **kwargs):
+            debug_print(f"Mock called with args: {args}, kwargs: {kwargs}")
+            return super().__call__(*args, **kwargs)
+
+    with patch('builtins.print', side_effect=debug_print):
         with patch('oauth2client.file.Storage') as MockStorage:
-            mock_storage_instance = MockStorage.return_value
+            # Use a different strategy for mocking
+            mock_storage_instance = VerboseMock()
+            
+            # Create a mock credentials object with more realistic behavior
             mock_credentials = MagicMock()
             mock_credentials.invalid = False
             mock_credentials.access_token = "test_access_token"
             mock_credentials.client_id = "test_client_id"
+            
+            # Configure the mocked Storage
+            mock_storage_class = MockStorage
+            mock_storage_class.return_value = mock_storage_instance
             mock_storage_instance.get.return_value = mock_credentials
             
             with patch('os.path.join', return_value='.auth/credentials.json'):
                 result = get_credentials()
+                
+                # Detailed debug information
+                debug_print(f"Result type: {type(result)}")
+                debug_print(f"Result value: {result}")
+                debug_print(f"Invalid attribute: {getattr(result, 'invalid', 'Not found')}")
+                
                 assert result is not False, "Should return credentials when valid"
                 assert result.invalid is False, "Returned credentials should be valid"
                 assert result.access_token == "test_access_token", "Should return correct credentials"
