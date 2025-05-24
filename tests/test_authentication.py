@@ -8,8 +8,18 @@ from unittest.mock import patch, MagicMock
 # Add the project root directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Patch TextExtractWorker's import before importing app
+# Mock external dependencies
 sys.modules['textract'] = MagicMock()
+sys.modules['sklearn'] = MagicMock()
+sys.modules['sklearn.feature_extraction'] = MagicMock()
+sys.modules['sklearn.feature_extraction.text'] = MagicMock()
+sys.modules['sklearn.metrics'] = MagicMock()
+sys.modules['sklearn.metrics.pairwise'] = MagicMock()
+sys.modules['oauth2client'] = MagicMock()
+sys.modules['oauth2client.file'] = MagicMock()
+sys.modules['oauth2client.client'] = MagicMock()
+sys.modules['apiclient'] = MagicMock()
+sys.modules['httplib2'] = MagicMock()
 
 # Import the function to test
 from app import get_credentials
