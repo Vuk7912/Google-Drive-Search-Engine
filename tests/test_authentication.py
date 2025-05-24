@@ -79,9 +79,16 @@ def test_get_credentials_valid_credentials():
     """Test get_credentials() with valid credentials."""
     valid_creds = MockCredentials(invalid=False)
     
+    def mock_storage_class(*args, **kwargs):
+        # Create a storage mock that always returns valid credentials
+        mock_storage = MagicMock()
+        mock_storage.get.return_value = valid_creds
+        return mock_storage
+    
     with patch('os.path.join', return_value='.auth/credentials.json'):
-        with patch('oauth2client.file.Storage', return_value=MockStorage(credentials=valid_creds)):
+        with patch('oauth2client.file.Storage', side_effect=mock_storage_class):
             result = get_credentials()
+            print(f"Result type: {type(result)}, Value: {result}")
             assert result is not False, "Should return credentials when valid"
             assert result.invalid is False, "Returned credentials should be valid"
             assert result.access_token == "test_token", "Should return correct credentials"
