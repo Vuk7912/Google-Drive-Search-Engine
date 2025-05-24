@@ -45,9 +45,9 @@ from app import get_credentials
 
 def test_get_credentials_file_not_exists():
     """Test get_credentials() when credentials file does not exist."""
-    with patch('oauth2client.file.Storage', autospec=True) as mock_storage_class:
-        mock_storage = mock_storage_class.return_value
-        mock_storage.get.return_value = None
+    with patch('oauth2client.file.Storage') as MockStorage:
+        mock_storage_instance = MockStorage.return_value
+        mock_storage_instance.get.return_value = None
         
         with patch('os.path.join', return_value='.auth/credentials.json'):
             result = get_credentials()
@@ -55,11 +55,11 @@ def test_get_credentials_file_not_exists():
 
 def test_get_credentials_invalid_credentials():
     """Test get_credentials() with invalid credentials."""
-    with patch('oauth2client.file.Storage', autospec=True) as mock_storage_class:
-        mock_storage = mock_storage_class.return_value
+    with patch('oauth2client.file.Storage') as MockStorage:
+        mock_storage_instance = MockStorage.return_value
         mock_credentials = MagicMock()
         mock_credentials.invalid = True
-        mock_storage.get.return_value = mock_credentials
+        mock_storage_instance.get.return_value = mock_credentials
         
         with patch('os.path.join', return_value='.auth/credentials.json'):
             result = get_credentials()
@@ -67,25 +67,28 @@ def test_get_credentials_invalid_credentials():
 
 def test_get_credentials_valid_credentials():
     """Test get_credentials() with valid credentials."""
-    with patch('oauth2client.file.Storage', autospec=True) as mock_storage_class:
-        mock_storage = mock_storage_class.return_value
+    with patch('oauth2client.file.Storage') as MockStorage:
+        mock_storage_instance = MockStorage.return_value
         mock_credentials = MagicMock()
         mock_credentials.invalid = False
         mock_credentials.access_token = "test_access_token"
         mock_credentials.client_id = "test_client_id"
-        mock_storage.get.return_value = mock_credentials
+        mock_storage_instance.get.return_value = mock_credentials
         
         with patch('os.path.join', return_value='.auth/credentials.json'):
             result = get_credentials()
+            print(f"Result: {result}")
+            print(f"Result type: {type(result)}")
+            print(f"Invalid attribute: {result.invalid if hasattr(result, 'invalid') else 'Not found'}")
             assert result is not False, "Should return credentials when valid"
             assert result.invalid is False, "Returned credentials should be valid"
             assert result.access_token == "test_access_token", "Should return correct credentials"
 
 def test_get_credentials_file_permissions():
     """Test get_credentials() handling of file permission issues."""
-    with patch('oauth2client.file.Storage', autospec=True) as mock_storage_class:
-        mock_storage = mock_storage_class.return_value
-        mock_storage.get.side_effect = PermissionError("Mock permission error")
+    with patch('oauth2client.file.Storage') as MockStorage:
+        mock_storage_instance = MockStorage.return_value
+        mock_storage_instance.get.side_effect = PermissionError("Mock permission error")
         
         with patch('os.path.join', return_value='.auth/credentials.json'):
             result = get_credentials()
@@ -93,9 +96,9 @@ def test_get_credentials_file_permissions():
 
 def test_get_credentials_corrupt_file():
     """Test get_credentials() with a corrupt credentials file."""
-    with patch('oauth2client.file.Storage', autospec=True) as mock_storage_class:
-        mock_storage = mock_storage_class.return_value
-        mock_storage.get.side_effect = json.JSONDecodeError("", doc="", pos=0)
+    with patch('oauth2client.file.Storage') as MockStorage:
+        mock_storage_instance = MockStorage.return_value
+        mock_storage_instance.get.side_effect = json.JSONDecodeError("", doc="", pos=0)
         
         with patch('os.path.join', return_value='.auth/credentials.json'):
             result = get_credentials()
