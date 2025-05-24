@@ -4,10 +4,12 @@ import pytest
 import json
 import tempfile
 from unittest.mock import patch, MagicMock
-from oauth2client.file import Storage
 
 # Add the project root directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Patch TextExtractWorker's import before importing app
+sys.modules['textract'] = MagicMock()
 
 # Import the function to test
 from app import get_credentials
