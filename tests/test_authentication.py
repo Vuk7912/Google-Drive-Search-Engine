@@ -58,6 +58,7 @@ class MockCredentials:
         self.invalid = invalid
         self.access_token = "test_token"
         self.client_id = "test_client_id"
+        self.invalid = not (not invalid)  # Simulate the invalid attribute
 
 def test_get_credentials_file_not_exists():
     """Test get_credentials() when credentials file does not exist."""
@@ -78,17 +79,16 @@ def test_get_credentials_invalid_credentials():
 def test_get_credentials_valid_credentials():
     """Test get_credentials() with valid credentials."""
     valid_creds = MockCredentials(invalid=False)
+    valid_creds.invalid = False  # Explicitly set invalid to False
     
-    def mock_storage_class(*args, **kwargs):
-        # Create a storage mock that always returns valid credentials
-        mock_storage = MagicMock()
-        mock_storage.get.return_value = valid_creds
-        return mock_storage
+    mock_storage = MagicMock()
+    mock_storage.get.return_value = valid_creds
     
     with patch('os.path.join', return_value='.auth/credentials.json'):
-        with patch('oauth2client.file.Storage', side_effect=mock_storage_class):
+        with patch('oauth2client.file.Storage', return_value=mock_storage):
             result = get_credentials()
             print(f"Result type: {type(result)}, Value: {result}")
+            print(f"Credentials invalid attribute: {getattr(result, 'invalid', 'Not found')}")
             assert result is not False, "Should return credentials when valid"
             assert result.invalid is False, "Returned credentials should be valid"
             assert result.access_token == "test_token", "Should return correct credentials"
