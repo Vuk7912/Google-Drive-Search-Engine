@@ -43,66 +43,47 @@ sys.modules['googleapiclient.discovery'] = MockDiscovery
 # Import the function to test
 from app import get_credentials
 
-class MockStorage:
-    def __init__(self, credentials=None, raise_error=False):
-        self._credentials = credentials
-        self._raise_error = raise_error
-
-    def get(self):
-        if self._raise_error:
-            raise PermissionError("Mock permission error")
-        return self._credentials
-
-class MockCredentials:
-    def __init__(self, invalid=False):
-        self.invalid = invalid
-        self.access_token = "test_token"
-        self.client_id = "test_client_id"
-        self.invalid = not (not invalid)  # Simulate the invalid attribute
-
 def test_get_credentials_file_not_exists():
     """Test get_credentials() when credentials file does not exist."""
     with patch('os.path.join', return_value='.auth/credentials.json'):
-        with patch('oauth2client.file.Storage', return_value=MockStorage(credentials=None)):
+        with patch('oauth2client.file.Storage.get', return_value=None):
             result = get_credentials()
             assert result is False, "Should return False when no credentials exist"
 
 def test_get_credentials_invalid_credentials():
     """Test get_credentials() with invalid credentials."""
-    invalid_creds = MockCredentials(invalid=True)
+    mock_invalid_creds = MagicMock()
+    mock_invalid_creds.invalid = True
     
     with patch('os.path.join', return_value='.auth/credentials.json'):
-        with patch('oauth2client.file.Storage', return_value=MockStorage(credentials=invalid_creds)):
+        with patch('oauth2client.file.Storage.get', return_value=mock_invalid_creds):
             result = get_credentials()
             assert result is False, "Should return False for invalid credentials"
 
 def test_get_credentials_valid_credentials():
     """Test get_credentials() with valid credentials."""
-    valid_creds = MockCredentials(invalid=False)
-    valid_creds.invalid = False  # Explicitly set invalid to False
-    
-    mock_storage = MagicMock()
-    mock_storage.get.return_value = valid_creds
+    mock_valid_creds = MagicMock()
+    mock_valid_creds.invalid = False
+    mock_valid_creds.access_token = "test_access_token"
+    mock_valid_creds.client_id = "test_client_id"
     
     with patch('os.path.join', return_value='.auth/credentials.json'):
-        with patch('oauth2client.file.Storage', return_value=mock_storage):
+        with patch('oauth2client.file.Storage.get', return_value=mock_valid_creds):
             result = get_credentials()
-            print(f"Result type: {type(result)}, Value: {result}")
-            print(f"Credentials invalid attribute: {getattr(result, 'invalid', 'Not found')}")
             assert result is not False, "Should return credentials when valid"
             assert result.invalid is False, "Returned credentials should be valid"
-            assert result.access_token == "test_token", "Should return correct credentials"
+            assert result.access_token == "test_access_token", "Should return correct credentials"
 
 def test_get_credentials_file_permissions():
     """Test get_credentials() handling of file permission issues."""
     with patch('os.path.join', return_value='.auth/credentials.json'):
-        with patch('oauth2client.file.Storage', return_value=MockStorage(raise_error=True)):
+        with patch('oauth2client.file.Storage.get', side_effect=PermissionError):
             result = get_credentials()
             assert result is False, "Should return False on permission error"
 
 def test_get_credentials_corrupt_file():
     """Test get_credentials() with a corrupt credentials file."""
     with patch('os.path.join', return_value='.auth/credentials.json'):
-        with patch('oauth2client.file.Storage', side_effect=json.JSONDecodeError("", doc="", pos=0)):
+        with patch('oauth2client.file.Storage.get', side_effect=json.JSONDecodeError("", doc="", pos=0)):
             result = get_credentials()
             assert result is False, "Should return False for corrupt credentials file"
